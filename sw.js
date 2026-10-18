@@ -2,7 +2,7 @@
 // Kaarttegels en plaatszoeken komen van externe diensten en worden niet gecachet.
 // Verhoog VERSION bij elke wijziging aan de bestanden hieronder.
 
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = `werelderfgoed-${VERSION}`;
 const SHELL = [
   "./",

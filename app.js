@@ -217,12 +217,12 @@ function renderOrigin(nearby) {
   originLayer.clearLayers();
   if (!state.origin) return;
   const { lat, lon } = state.origin;
-  L.circleMarker([lat, lon], { radius: 7, color: "#fff", weight: 2, fillColor: "#2563eb", fillOpacity: 1 })
+  L.circleMarker([lat, lon], { radius: 6, color: "#092328", weight: 4, fillColor: "#ffffff", fillOpacity: 1 })
     .addTo(originLayer);
   if (nearby) {
     L.circle([lat, lon], {
       radius: RADII[state.radiusIndex] * 1000,
-      color: "#2563eb", weight: 1.5, fillOpacity: 0.06, interactive: false,
+      color: "#12544f", weight: 1.5, fillOpacity: 0.06, interactive: false,
     }).addTo(originLayer);
   }
 }

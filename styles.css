@@ -1,35 +1,44 @@
 :root {
-  --bg: #f6f4ef;
+  /* Palet: colorhunt.co/palette/09232812544f2a835f8bbb92 */
+  --ink: #092328;
+  --deep: #12544f;
+  --green: #2a835f;
+  --sage: #8bbb92;
+
+  --bg: #f2f6f2;
   --surface: #ffffff;
-  --surface-2: #efece5;
-  --text: #1c2430;
-  --muted: #5f6b7a;
-  --border: #ddd8cd;
-  --brand: #1d3a5f;
-  --accent: #2563eb;
-  --visited: #15803d;
-  --want: #d97706;
-  --none: #64748b;
-  --danger: #dc2626;
+  --surface-2: #e6eee7;
+  --text: var(--ink);
+  --muted: #4d6668;
+  --border: #cfdcd1;
+  --brand: var(--ink);
+  --accent: var(--deep);
+  --on-accent: #ffffff;
+  --visited: var(--green);
+  --want: var(--sage);
+  --on-want: var(--ink);
+  --want-text: var(--deep);
+  --none: #8a9a9c;
+  --danger: #c2410c;
   --radius: 14px;
-  --shadow: 0 -4px 24px rgb(0 0 0 / 0.12);
+  --shadow: 0 -4px 24px rgb(9 35 40 / 0.14);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #12161c;
-    --surface: #1a2029;
-    --surface-2: #232b36;
-    --text: #e8ecf1;
-    --muted: #9aa6b4;
-    --border: #2f3946;
-    --brand: #0f1f33;
-    --accent: #60a5fa;
-    --visited: #22c55e;
-    --want: #f59e0b;
-    --none: #94a3b8;
-    --danger: #f87171;
+    --bg: #061a1e;
+    --surface: var(--ink);
+    --surface-2: #10343a;
+    --text: #e4eee6;
+    --muted: #9db5a2;
+    --border: #1c4a4c;
+    --brand: #041417;
+    --accent: var(--sage);
+    --on-accent: var(--ink);
+    --want-text: var(--sage);
+    --none: #6f8789;
+    --danger: #fb923c;
     --shadow: 0 -4px 24px rgb(0 0 0 / 0.5);
     color-scheme: dark;
   }
@@ -260,7 +269,7 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
 
 .badge { flex: none; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .badge-visited { color: var(--visited); background: color-mix(in srgb, var(--visited) 14%, transparent); }
-.badge-want { color: var(--want); background: color-mix(in srgb, var(--want) 14%, transparent); }
+.badge-want { color: var(--want-text); background: color-mix(in srgb, var(--want) 28%, transparent); }
 
 /* ---------- Detail ---------- */
 
@@ -283,7 +292,7 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
   font-weight: 600;
 }
 .status-btn[data-set="visited"][aria-pressed="true"] { border-color: var(--visited); background: var(--visited); color: #fff; }
-.status-btn[data-set="want"][aria-pressed="true"] { border-color: var(--want); background: var(--want); color: #fff; }
+.status-btn[data-set="want"][aria-pressed="true"] { border-color: var(--want); background: var(--want); color: var(--on-want); }
 .since { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
 .links { display: flex; gap: 16px; margin: 16px 0 0; }
 .links a { color: var(--accent); }
@@ -308,7 +317,7 @@ input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--brand) 85%, transparent);
+  background: color-mix(in srgb, var(--deep) 92%, transparent);
   color: #fff;
   font-size: 13px;
   font-weight: 650;
@@ -347,7 +356,7 @@ dialog::backdrop { background: rgb(0 0 0 / 0.45); }
   border: 0;
   border-radius: 10px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
   text-align: center;
   cursor: pointer;
