@@ -7,7 +7,7 @@
 //
 // Verhoog VERSION bij elke wijziging aan de bestanden in SHELL.
 
-const VERSION = "v4";
+const VERSION = "v5";
 const SHELL_CACHE = `werelderfgoed-shell-${VERSION}`;
 const TILE_CACHE = "werelderfgoed-tegels";
 const IMAGE_CACHE = "werelderfgoed-beelden";
@@ -52,9 +52,7 @@ self.addEventListener("fetch", (event) => {
 
   if (url.origin === self.location.origin) {
     event.respondWith(networkFirst(req));
-  } else if (url.hostname.endsWith(".basemaps.cartocdn.com")) {
-    // Alle subdomeinen (a-d) delen één cache-sleutel.
-    url.hostname = "a.basemaps.cartocdn.com";
+  } else if (url.hostname === "tile.openstreetmap.org") {
     event.respondWith(cacheFirst(req, url.href, TILE_CACHE, MAX_TILES));
   } else if (url.hostname === "upload.wikimedia.org") {
     event.respondWith(cacheFirst(req, url.href, IMAGE_CACHE, MAX_IMAGES));
@@ -75,17 +73,27 @@ async function networkFirst(req) {
   }
 }
 
+// Eerst de cache. Anders halen we het bestand zelf op met CORS, zodat we het kunnen
+// bewaren. Lukt dat niet, dan geven we het gewone antwoord door zonder te bewaren:
+// de kaart moet altijd laden, ook als bewaren niet kan.
 async function cacheFirst(req, key, cacheName, max) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(key);
-  if (cached) return cached;
+  let cache = null;
   try {
-    const res = await fetch(req);
+    cache = await caches.open(cacheName);
+    const cached = await cache.match(key);
+    if (cached) return cached;
+  } catch { /* geen cache beschikbaar */ }
+
+  try {
+    const res = await fetch(key, { mode: "cors", credentials: "omit" });
     if (res.ok) {
-      await cache.put(key, res.clone());
-      trim(cache, max);
+      if (cache) cache.put(key, res.clone()).then(() => trim(cache, max)).catch(() => {});
+      return res;
     }
-    return res;
+  } catch { /* geen CORS of geen netwerk: hieronder nog één poging */ }
+
+  try {
+    return await fetch(req);
   } catch {
     return Response.error();
   }

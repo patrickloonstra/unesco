@@ -457,6 +457,11 @@ input[type="search"]:focus { outline: 0; border-bottom-color: var(--accent); }
 body.picking .map { cursor: crosshair; }
 
 .leaflet-container { font: inherit; background: var(--paper); }
+/* OpenStreetMap is fel; getemperd vallen de pins en het palet beter op. */
+.leaflet-tile-pane { filter: saturate(0.45) contrast(0.92) brightness(1.03); }
+@media (prefers-color-scheme: dark) {
+  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) saturate(0.35) brightness(0.82) contrast(0.92); }
+}
 .leaflet-bar { border: 1px solid var(--line) !important; border-radius: 0 !important; box-shadow: none !important; }
 .leaflet-bar a { background: var(--surface) !important; color: var(--text) !important; border-color: var(--line) !important; border-radius: 0 !important; }
 .leaflet-control-attribution { background: color-mix(in srgb, var(--surface) 85%, transparent) !important; color: var(--muted) !important; font-size: 10px; }

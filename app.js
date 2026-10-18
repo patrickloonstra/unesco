@@ -107,14 +107,24 @@ function toast(message) {
 const map = L.map("map", { zoomControl: false, worldCopyJump: true }).setView([30, 10], 2);
 L.control.zoom({ position: "topright" }).addTo(map);
 
-const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-const TILE_URL = `https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`;
-L.tileLayer(TILE_URL, {
+// OpenStreetMap-standaardkaart. De kleuren tempert styles.css, zodat de pins opvallen.
+const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const tiles = L.tileLayer(TILE_URL, {
   maxZoom: 19,
-  subdomains: "abcd",
-  crossOrigin: true, // nodig zodat de service worker tegels bruikbaar kan bewaren
-  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bijdragers',
 }).addTo(map);
+
+// Laadt er na een poos nog steeds geen enkele tegel, zeg dat dan in plaats van een lege kaart.
+let tilesLoaded = 0;
+let tileErrors = 0;
+tiles.on("tileload", () => tilesLoaded++);
+tiles.on("tileerror", () => {
+  if (++tileErrors === 6 && !tilesLoaded) {
+    toast(navigator.onLine
+      ? "De kaart van OpenStreetMap laadt niet. Herlaad de pagina of probeer het later opnieuw."
+      : "Je bent offline. Je ziet alleen de kaart van gebieden die je eerder bekeek of klaarzette.");
+  }
+});
 
 const cluster = L.markerClusterGroup({
   showCoverageOnHover: false,
@@ -616,8 +626,7 @@ async function prepareOffline() {
     } catch { /* telt niet mee */ }
   }
 
-  const template = TILE_URL.replace("{s}", "a").replace("{r}", L.Browser.retina ? "@2x" : "");
-  const urls = [...new Set(targets.flatMap((s) => OfflineMap.tilesAround(s.lat, s.lon, template)))];
+  const urls = [...new Set(targets.flatMap((s) => OfflineMap.tilesAround(s.lat, s.lon, TILE_URL)))];
   const { failed } = await OfflineMap.fetchAll(urls, (done, total) => {
     status.textContent = `Kaart opslaan: ${done} van ${total} tegels…`;
   });

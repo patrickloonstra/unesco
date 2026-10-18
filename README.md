@@ -88,6 +88,8 @@ Je opgeslagen statussen gebruiken het officiële UNESCO-id, dus die blijven geld
 
 ## Externe diensten
 
-- Kaarttegels: © OpenStreetMap-bijdragers, © CARTO
+- Kaart: OpenStreetMap (© OpenStreetMap-bijdragers). Gebruik de offline-knop met mate:
+  de tegelservers van OpenStreetMap zijn bedoeld voor normaal kijken, niet voor massaal
+  downloaden.
 - Plaatsen zoeken: Nominatim (OpenStreetMap), alleen bij het indrukken van "Zoek"
 - Reisgidsen: Wikivoyage (tekst onder CC BY-SA 4.0), foto's via Wikimedia Commons
