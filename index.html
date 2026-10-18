@@ -12,54 +12,68 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="vendor/fonts/fonts.css">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <h1>Werelderfgoed</h1>
-    <div class="progress" id="progress" aria-live="polite"></div>
+  <header class="masthead">
+    <div class="brand">
+      <svg class="emblem" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2"/>
+        <rect x="9" y="9" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      <h1>Werelderfgoed</h1>
+    </div>
+    <div class="tally" id="progress" aria-live="polite">
+      <div class="tally-figures"><strong id="tally-n">0</strong> <span id="tally-of"></span> <span class="tally-label">bezocht</span></div>
+      <div class="tally-bar"><span id="tally-fill"></span></div>
+    </div>
     <button class="icon-btn" id="menu-btn" aria-label="Menu" aria-haspopup="dialog">
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 8h16M4 16h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
   </header>
 
   <main class="layout">
-    <div id="map" class="map" aria-label="Kaart met werelderfgoedlocaties"></div>
+    <div class="map-wrap">
+      <div id="map" class="map" aria-label="Kaart met werelderfgoedlocaties"></div>
+      <aside class="legend" aria-label="Legenda">
+        <span><i class="glyph glyph-c is-none"></i>Cultureel</span>
+        <span><i class="glyph glyph-n is-none"></i>Natuur</span>
+        <span><i class="glyph glyph-m is-none"></i>Gemengd</span>
+        <span class="legend-status"><i class="swatch is-visited"></i>Bezocht</span>
+        <span class="legend-status"><i class="swatch is-want"></i>Wil ik heen</span>
+      </aside>
+    </div>
 
     <section class="sheet" id="sheet">
       <button class="sheet-handle" id="sheet-handle" aria-label="Lijst groter of kleiner maken"><span></span></button>
 
       <nav class="tabs" role="tablist">
-        <button role="tab" data-tab="nearby">In de buurt</button>
-        <button role="tab" data-tab="want">Wil ik heen <span class="count" data-count="want"></span></button>
-        <button role="tab" data-tab="visited">Bezocht <span class="count" data-count="visited"></span></button>
-        <button role="tab" data-tab="all">Alle</button>
+        <button role="tab" data-tab="nearby">Dichtbij</button>
+        <button role="tab" data-tab="want">Wil ik heen<sup class="count" data-count="want"></sup></button>
+        <button role="tab" data-tab="visited">Bezocht<sup class="count" data-count="visited"></sup></button>
+        <button role="tab" data-tab="all">Alles</button>
       </nav>
 
       <div class="nearby-controls" id="nearby-controls" hidden>
+        <p class="phrase">Alles binnen <strong><span id="radius-value"></span> km</strong> van <strong id="origin-label"></strong></p>
+        <input type="range" id="radius" min="0" max="10" step="1" aria-label="Straal">
+        <p class="origin-hint" id="origin-hint">Kies een vertrekpunt: je eigen locatie, een plaats of een punt op de kaart.</p>
         <div class="origin-row">
-          <button class="chip" id="gps-btn">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Mijn locatie
-          </button>
-          <button class="chip" id="pick-btn">Kies op kaart</button>
+          <button class="text-btn" id="gps-btn">Mijn locatie</button>
+          <button class="text-btn" id="pick-btn">Punt op de kaart</button>
         </div>
         <form class="place-form" id="place-form">
-          <input type="search" id="place-input" placeholder="Zoek een plaats, bijv. Lissabon" autocomplete="off" enterkeyhint="search">
-          <button type="submit" class="chip">Zoek</button>
+          <input type="search" id="place-input" placeholder="Of zoek een plaats, bijv. Lissabon" autocomplete="off" enterkeyhint="search">
+          <button type="submit" class="text-btn">Zoek</button>
         </form>
         <ul class="place-results" id="place-results" hidden></ul>
-        <div class="origin-label" id="origin-label"></div>
-        <label class="radius">
-          <span>Straal <strong id="radius-value"></strong></span>
-          <input type="range" id="radius" min="0" max="10" step="1">
-        </label>
       </div>
 
       <div class="search-row" id="search-row">
-        <input type="search" id="search" placeholder="Zoek op naam of land" autocomplete="off">
+        <input type="search" id="search" placeholder="Filter op naam of land" autocomplete="off">
       </div>
 
       <p class="list-meta" id="list-meta"></p>
@@ -72,14 +86,14 @@
   <dialog id="menu">
     <form method="dialog" class="menu-inner">
       <h2>Je gegevens</h2>
-      <p>Je lijsten worden alleen in deze browser bewaard. Maak af en toe een back-up, of zet ze zo over naar een ander apparaat.</p>
-      <button type="button" class="btn" id="export-btn">Exporteer back-up</button>
+      <p>Je lijsten staan alleen in deze browser. Maak af en toe een back-up, of zet ze zo over naar een ander apparaat.</p>
+      <button type="button" class="btn" id="export-btn">Back-up downloaden</button>
       <label class="btn btn-secondary">
-        Importeer back-up
+        Back-up terugzetten
         <input type="file" id="import-input" accept="application/json,.json" hidden>
       </label>
       <p class="menu-status" id="menu-status" role="status"></p>
-      <p class="small">Bron: UNESCO-werelderfgoedlijst, <span id="data-info"></span>. Kaart: © OpenStreetMap, © CARTO.</p>
+      <p class="small">Bron: UNESCO-werelderfgoedlijst, <span id="data-info"></span>. Het embleem: het vierkant staat voor wat mensen maakten, de cirkel voor de natuur. Kaart © OpenStreetMap, © CARTO.</p>
       <button class="btn btn-secondary" value="close">Sluiten</button>
     </form>
   </dialog>

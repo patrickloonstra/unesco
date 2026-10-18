@@ -2,7 +2,7 @@
 // Kaarttegels en plaatszoeken komen van externe diensten en worden niet gecachet.
 // Verhoog VERSION bij elke wijziging aan de bestanden hieronder.
 
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = `werelderfgoed-${VERSION}`;
 const SHELL = [
   "./",
@@ -17,6 +17,7 @@ const SHELL = [
   "vendor/leaflet/leaflet.css",
   "vendor/markercluster/leaflet.markercluster.js",
   "vendor/markercluster/MarkerCluster.css",
+  "vendor/fonts/fonts.css",
 ];
 
 self.addEventListener("install", (event) => {

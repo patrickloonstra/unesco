@@ -5,9 +5,10 @@ bezocht, waar je nog heen wilt en wat er in de buurt ligt.
 
 ## Functies
 
-- **Kaart** met alle 1.273 locaties, gegroepeerd per gebied. De kleur van een pin
-  toont je status: groen is bezocht, oranje is "wil ik heen", grijs is nog niets.
-  Een rode rand betekent dat de locatie op de lijst van bedreigd erfgoed staat.
+- **Kaart** met alle 1.273 locaties, gegroepeerd per gebied. De vorm van een pin volgt
+  het werelderfgoedembleem: een vierkant is cultureel erfgoed, een cirkel natuur, een
+  vierkant in een cirkel gemengd. De vulling is je status: hol is nog niet geweest,
+  saliegroen is "wil ik heen", groen is bezocht. Een rode rand betekent bedreigd erfgoed.
 - **In de buurt**: vanaf je GPS-locatie, een plaats die je zoekt of een punt dat je
   op de kaart tikt, binnen een straal van 10 tot 1.000 km, gesorteerd op afstand.
 - **Wil ik heen** en **Bezocht**: je eigen lijsten, met de datum van markeren.
@@ -52,7 +53,7 @@ alleen in je eigen browser.
 | `index.html`, `styles.css`, `app.js` | De app |
 | `data/sites.json` | Compacte lijst van alle locaties |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Installeerbaar en offline bruikbaar |
-| `vendor/` | Leaflet 1.9.4 en Leaflet.markercluster 1.5.3 |
+| `vendor/` | Leaflet 1.9.4, Leaflet.markercluster 1.5.3 en de lettertypen Gloock, Schibsted Grotesk en IBM Plex Mono (OFL, via Fontsource) |
 | `scripts/build-data.mjs` | Maakt `data/sites.json` uit een GeoJSON-bron |
 
 ## Data bijwerken

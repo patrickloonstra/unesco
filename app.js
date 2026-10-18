@@ -58,6 +58,8 @@ function countriesLabel(countries) {
 }
 
 const CATEGORY_LABEL = { c: "Cultureel", n: "Natuur", m: "Gemengd" };
+const CATEGORY_LONG = { c: "Cultureel erfgoed", n: "Natuurerfgoed", m: "Gemengd erfgoed" };
+const formatCount = (n) => n.toLocaleString("nl-NL");
 const STATUS_LABEL = { visited: "Bezocht", want: "Wil ik heen" };
 
 let toastTimer;
@@ -75,7 +77,7 @@ const map = L.map("map", { zoomControl: false, worldCopyJump: true }).setView([3
 L.control.zoom({ position: "topright" }).addTo(map);
 
 const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`, {
+L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`, {
   maxZoom: 19,
   subdomains: "abcd",
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
@@ -86,7 +88,7 @@ const cluster = L.markerClusterGroup({
   maxClusterRadius: 45,
   iconCreateFunction: (c) => {
     const n = c.getChildCount();
-    const size = n < 10 ? 32 : n < 100 ? 38 : 44;
+    const size = n < 10 ? 30 : n < 100 ? 36 : 42;
     return L.divIcon({ html: `<span>${n}</span>`, className: "cluster", iconSize: [size, size] });
   },
 }).addTo(map);
@@ -98,7 +100,7 @@ function markerIcon(site) {
   return L.divIcon({
     className: `pin pin-${status}${site.danger ? " pin-danger" : ""}`,
     iconSize: [18, 18],
-    html: "<span></span>",
+    html: `<span class="glyph glyph-${site.category}"></span>`,
   });
 }
 
@@ -166,23 +168,24 @@ function render() {
   const counts = { visited: 0, want: 0 };
   for (const { status } of Object.values(state.statuses)) counts[status]++;
   for (const el of document.querySelectorAll("[data-count]")) el.textContent = counts[el.dataset.count] || "";
-  $("#progress").textContent = `${counts.visited} / ${sites.length} bezocht`;
+  $("#tally-n").textContent = formatCount(counts.visited);
+  $("#tally-of").textContent = `/ ${formatCount(sites.length)}`;
+  $("#tally-fill").style.width = `${Math.max(counts.visited / sites.length * 100, counts.visited ? 1 : 0)}%`;
 
   // Bediening voor "In de buurt"
   const nearby = state.tab === "nearby";
   $("#nearby-controls").hidden = !nearby;
   $("#radius").value = state.radiusIndex;
-  $("#radius-value").textContent = `${RADII[state.radiusIndex]} km`;
-  $("#origin-label").textContent = state.origin
-    ? `Vanaf: ${state.origin.label}`
-    : "Kies eerst een vertrekpunt: je locatie, een plaats of een punt op de kaart.";
+  $("#radius-value").textContent = formatCount(RADII[state.radiusIndex]);
+  $("#origin-label").textContent = state.origin ? state.origin.label : "…";
+  $("#origin-hint").hidden = !!state.origin;
   renderOrigin(nearby);
 
   // Lijst
   const meta = $("#list-meta");
   if (nearby && !state.origin) meta.textContent = "";
   else if (!list.length) meta.textContent = emptyMessage();
-  else meta.textContent = `${list.length} ${list.length === 1 ? "locatie" : "locaties"}`;
+  else meta.textContent = `${formatCount(list.length)} ${list.length === 1 ? "locatie" : "locaties"}`;
 
   const shown = list.slice(0, 300);
   $("#site-list").innerHTML = shown.map(listItem).join("") +
@@ -199,17 +202,21 @@ function emptyMessage() {
   return "Geen locaties.";
 }
 
+function glyph(category, status) {
+  return `<span class="glyph glyph-${category} is-${status ?? "none"}" aria-hidden="true"></span>`;
+}
+
 function listItem(s) {
   const status = statusOf(s.id);
   const dist = s.distance != null ? `<span class="dist">${formatKm(s.distance)}</span>` : "";
-  const badge = status ? `<span class="badge badge-${status}">${STATUS_LABEL[status]}</span>` : "";
+  const mark = status ? `<span class="state state-${status}">${STATUS_LABEL[status]}</span>` : "";
   return `<li><button class="site" data-id="${s.id}">
-      <span class="dot dot-${status ?? "none"}" aria-hidden="true"></span>
+      ${glyph(s.category, status)}
       <span class="site-text">
         <span class="site-name">${escapeHtml(s.name)}</span>
-        <span class="site-sub">${escapeHtml(countriesLabel(s.countries))} · ${CATEGORY_LABEL[s.category]}${s.danger ? " · <em>Bedreigd</em>" : ""}</span>
+        <span class="site-sub">${escapeHtml(countriesLabel(s.countries))} <span class="yr">${s.year}</span>${s.danger ? ` <em>Bedreigd</em>` : ""}</span>
       </span>
-      ${badge}${dist}
+      <span class="site-aside">${dist}${mark}</span>
     </button></li>`;
 }
 
@@ -272,27 +279,33 @@ function renderDetail() {
   const status = statusOf(s.id);
   const entry = state.statuses[s.id];
   const dist = state.origin ? distanceKm(state.origin.lat, state.origin.lon, s.lat, s.lon) : null;
-  const since = entry ? new Date(entry.updatedAt).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
+  const date = entry ? new Date(entry.updatedAt) : null;
+  const since = date ? date.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
+  const stampDate = date ? date.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" }).replaceAll("-", "·") : "";
 
   const el = $("#detail");
   el.innerHTML = `
-    <button class="back" id="detail-back">← Terug naar lijst</button>
-    <h2>${escapeHtml(s.name)}</h2>
-    <p class="detail-sub">${escapeHtml(s.countries.split(",").join(", "))}</p>
+    <button class="back" id="detail-back">← Terug naar de lijst</button>
+    <header class="entry">
+      <p class="eyebrow">${glyph(s.category, status)} Nº ${escapeHtml(s.id)} · ${CATEGORY_LONG[s.category]}</p>
+      <h2>${escapeHtml(s.name)}</h2>
+      <p class="detail-sub">${escapeHtml(s.countries.split(",").join(", "))}</p>
+      ${status === "visited" ? `<div class="stamp" aria-hidden="true"><span>Bezocht</span><span class="stamp-date">${stampDate}</span></div>` : ""}
+    </header>
     <dl class="facts">
-      <div><dt>Type</dt><dd>${CATEGORY_LABEL[s.category]}</dd></div>
       <div><dt>Ingeschreven</dt><dd>${s.year}</dd></div>
       ${dist != null ? `<div><dt>Afstand</dt><dd>${formatKm(dist)}</dd></div>` : ""}
+      <div><dt>Coördinaten</dt><dd>${s.lat.toFixed(2)}, ${s.lon.toFixed(2)}</dd></div>
     </dl>
-    ${s.danger ? `<p class="danger-note">Staat op de lijst van bedreigd werelderfgoed.</p>` : ""}
+    ${s.danger ? `<p class="danger-note">Op de lijst van bedreigd werelderfgoed.</p>` : ""}
     <div class="status-buttons">
-      <button class="status-btn" data-set="visited" aria-pressed="${status === "visited"}">✓ Bezocht</button>
-      <button class="status-btn" data-set="want" aria-pressed="${status === "want"}">★ Wil ik heen</button>
+      <button class="status-btn" data-set="visited" aria-pressed="${status === "visited"}">Bezocht</button>
+      <button class="status-btn" data-set="want" aria-pressed="${status === "want"}">Wil ik heen</button>
     </div>
     ${status ? `<p class="since">${STATUS_LABEL[status]} sinds ${since}</p>` : ""}
     <p class="links">
-      <a href="https://whc.unesco.org/en/list/${encodeURIComponent(s.id)}" target="_blank" rel="noopener">Meer op unesco.org</a>
-      <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}" target="_blank" rel="noopener">Route</a>
+      <a href="https://whc.unesco.org/en/list/${encodeURIComponent(s.id)}" target="_blank" rel="noopener">Registerpagina op unesco.org ↗</a>
+      <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}" target="_blank" rel="noopener">Route ↗</a>
     </p>`;
   el.hidden = false;
   $("#sheet").classList.add("has-detail");
