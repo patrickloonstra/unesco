@@ -6,8 +6,10 @@
 //   node scripts/build-data.mjs package/data/data.json
 //
 // Elke locatie wordt een array:
-//   [id, naam, landen, categorie, jaar, lat, lon, bedreigd]
-// waarbij categorie "c" (cultureel), "n" (natuur) of "m" (gemengd) is.
+//   [id, naam, landen, categorie, jaar, lat, lon, bedreigd, regio]
+// waarbij categorie "c" (cultureel), "n" (natuur) of "m" (gemengd) is, en regio
+// een van de vijf UNESCO-regio's (zie REGION). Bij locaties in meerdere regio's
+// telt de eerste.
 
 import { readFileSync, writeFileSync } from "node:fs";
 
@@ -18,6 +20,13 @@ if (!input) {
 }
 
 const CATEGORY = { cultural: "c", natural: "n", mixed: "m" };
+const REGION = {
+  "Africa": "af",
+  "Arab States": "ar",
+  "Asia and the Pacific": "ap",
+  "Europe and North America": "en",
+  "Latin America and the Caribbean": "lc",
+};
 const round = (n) => Math.round(n * 1e5) / 1e5;
 
 const geo = JSON.parse(readFileSync(input, "utf8"));
@@ -34,6 +43,7 @@ const sites = geo.features
       round(lat),
       round(lon),
       p.danger ? 1 : 0,
+      REGION[p.region.split(",")[0]] ?? "en",
     ];
   })
   .filter((s) => Number.isFinite(s[5]) && Number.isFinite(s[6]))
@@ -45,7 +55,7 @@ if (ids.size !== sites.length) throw new Error("Dubbele id's in de bron");
 const out = {
   source: "UNESCO World Heritage List (snapshot via @worldwideview/wwv-plugin-unesco-sites)",
   generated: new Date().toISOString().slice(0, 10),
-  fields: ["id", "name", "countries", "category", "year", "lat", "lon", "danger"],
+  fields: ["id", "name", "countries", "category", "year", "lat", "lon", "danger", "region"],
   sites,
 };
 writeFileSync(new URL("../data/sites.json", import.meta.url), JSON.stringify(out));

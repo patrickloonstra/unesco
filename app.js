@@ -29,10 +29,34 @@ function statusOf(id) {
   return state.statuses[id]?.status ?? null;
 }
 
+const today = () => new Date().toLocaleDateString("sv-SE"); // JJJJ-MM-DD in lokale tijd
+
 function setStatus(id, status) {
-  if (status) state.statuses[id] = { status, updatedAt: new Date().toISOString() };
+  const entry = { status, updatedAt: new Date().toISOString() };
+  if (status === "visited") entry.visitedOn = today();
+  if (status) state.statuses[id] = entry;
   else delete state.statuses[id];
   saveState();
+  requestPersistence();
+}
+
+// De dag van het bezoek: zelf ingevuld, anders de dag waarop je het markeerde.
+const visitDate = (entry) => entry.visitedOn ?? entry.updatedAt.slice(0, 10);
+
+function formatDate(isoDay, style = "long") {
+  const [y, m, d] = isoDay.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return style === "stamp"
+    ? `${String(d).padStart(2, "0")}·${String(m).padStart(2, "0")}·${y}`
+    : date.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+}
+
+// Vraag de browser om onze opslag niet zomaar op te ruimen (lijsten, gidsen, kaart).
+let persistenceAsked = false;
+function requestPersistence() {
+  if (persistenceAsked || !navigator.storage?.persist) return;
+  persistenceAsked = true;
+  navigator.storage.persist().catch(() => {});
 }
 
 // ---------- Hulpfuncties ----------
@@ -59,6 +83,13 @@ function countriesLabel(countries) {
 
 const CATEGORY_LABEL = { c: "Cultureel", n: "Natuur", m: "Gemengd" };
 const CATEGORY_LONG = { c: "Cultureel erfgoed", n: "Natuurerfgoed", m: "Gemengd erfgoed" };
+const REGION_LABEL = {
+  en: "Europa en Noord-Amerika",
+  ap: "Azië en Stille Oceaan",
+  lc: "Latijns-Amerika en Caribisch gebied",
+  af: "Afrika",
+  ar: "Arabische staten",
+};
 const formatCount = (n) => n.toLocaleString("nl-NL");
 const STATUS_LABEL = { visited: "Bezocht", want: "Wil ik heen" };
 
@@ -77,9 +108,11 @@ const map = L.map("map", { zoomControl: false, worldCopyJump: true }).setView([3
 L.control.zoom({ position: "topright" }).addTo(map);
 
 const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`, {
+const TILE_URL = `https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`;
+L.tileLayer(TILE_URL, {
   maxZoom: 19,
   subdomains: "abcd",
+  crossOrigin: true, // nodig zodat de service worker tegels bruikbaar kan bewaren
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
 }).addTo(map);
 
@@ -115,8 +148,8 @@ async function loadSites() {
   const res = await fetch("data/sites.json");
   const data = await res.json();
   $("#data-info").textContent = `${data.sites.length} locaties`;
-  sites = data.sites.map(([id, name, countries, category, year, lat, lon, danger]) => ({
-    id, name, countries, category, year, lat, lon, danger: !!danger,
+  sites = data.sites.map(([id, name, countries, category, year, lat, lon, danger, region]) => ({
+    id, name, countries, category, year, lat, lon, danger: !!danger, region,
   }));
   for (const site of sites) {
     const m = L.marker([site.lat, site.lon], { icon: markerIcon(site), title: site.name });
@@ -150,7 +183,8 @@ function currentSites() {
     .map(withDistance)
     .sort((a, b) =>
       state.tab === "visited"
-        ? state.statuses[b.id].updatedAt.localeCompare(state.statuses[a.id].updatedAt)
+        ? visitDate(state.statuses[b.id]).localeCompare(visitDate(state.statuses[a.id])) ||
+          state.statuses[b.id].updatedAt.localeCompare(state.statuses[a.id].updatedAt)
         : (a.distance ?? 0) - (b.distance ?? 0) || a.name.localeCompare(b.name));
 }
 
@@ -185,10 +219,12 @@ function render() {
   const meta = $("#list-meta");
   if (nearby && !state.origin) meta.textContent = "";
   else if (!list.length) meta.textContent = emptyMessage();
+  else if (state.tab === "visited") meta.textContent = "";
   else meta.textContent = `${formatCount(list.length)} ${list.length === 1 ? "locatie" : "locaties"}`;
 
   const shown = list.slice(0, 300);
-  $("#site-list").innerHTML = shown.map(listItem).join("") +
+  const stats = state.tab === "visited" && counts.visited ? statsBlock() : "";
+  $("#site-list").innerHTML = stats + shown.map(listItem).join("") +
     (list.length > shown.length ? `<li class="more">Nog ${list.length - shown.length} locaties. Zoek of zoom om te verfijnen.</li>` : "");
 
   if (selectedId) renderDetail();
@@ -200,6 +236,69 @@ function emptyMessage() {
   if (state.tab === "want") return "Nog niets op je verlanglijst. Open een locatie en tik op ‘Wil ik heen’.";
   if (state.tab === "visited") return "Nog niets bezocht. Open een locatie en tik op ‘Bezocht’.";
   return "Geen locaties.";
+}
+
+// ---------- Statistieken ----------
+
+function statsBlock() {
+  const visited = sites.filter((s) => statusOf(s.id) === "visited");
+  const total = sites.length;
+  const want = Object.values(state.statuses).filter((e) => e.status === "want").length;
+  const pct = (visited.length / total) * 100;
+
+  // Landen tellen we alleen via locaties in één land: bij een grensoverschrijdende
+  // locatie weten we niet in welk land je was.
+  const countries = new Set(visited.filter((s) => !s.countries.includes(",")).map((s) => s.countries));
+  const thisYear = String(new Date().getFullYear());
+  const thisYearCount = visited.filter((s) => visitDate(state.statuses[s.id]).startsWith(thisYear)).length;
+  const danger = visited.filter((s) => s.danger).length;
+
+  const bar = (n, of) => `<span class="bar"><span style="width:${n ? Math.max((n / of) * 100, 1.5) : 0}%"></span></span>`;
+  const row = (label, n, of) => `<div class="stat-row">
+      <span class="stat-label">${label}</span>${bar(n, of)}<span class="stat-n">${formatCount(n)}<span> / ${formatCount(of)}</span></span>
+    </div>`;
+
+  const byRegion = Object.keys(REGION_LABEL).map((code) => {
+    const all = sites.filter((s) => s.region === code).length;
+    const n = visited.filter((s) => s.region === code).length;
+    return row(REGION_LABEL[code], n, all);
+  }).join("");
+  const byType = ["c", "n", "m"].map((c) => {
+    const all = sites.filter((s) => s.category === c).length;
+    const n = visited.filter((s) => s.category === c).length;
+    return row(`${glyph(c, n ? "visited" : null)} ${CATEGORY_LABEL[c]}`, n, all);
+  }).join("");
+
+  const recent = [...visited]
+    .sort((a, b) => visitDate(state.statuses[b.id]).localeCompare(visitDate(state.statuses[a.id])))
+    .slice(0, 12);
+  const stamps = recent.map((s, i) => `<button class="pass-stamp" data-open="${s.id}" style="--tilt:${[-9, 6, -4, 10, -12, 3][i % 6]}deg">
+      <span class="pass-name">${escapeHtml(shortName(s.name))}</span>
+      <span class="pass-date">${formatDate(visitDate(state.statuses[s.id]), "stamp")}</span>
+    </button>`).join("");
+
+  return `<li class="stats">
+    <div class="stat-figures">
+      <div><strong>${formatCount(visited.length)}</strong><span>bezocht</span></div>
+      <div><strong>${formatCount(countries.size)}</strong><span>${countries.size === 1 ? "land" : "landen"}</span></div>
+      <div><strong>${pct < 1 ? pct.toFixed(1).replace(".", ",") : Math.round(pct)}%</strong><span>van de lijst</span></div>
+    </div>
+    <h3 class="stat-head">Paspoort</h3>
+    <div class="passport">${stamps}</div>
+    <h3 class="stat-head">Per regio</h3>
+    ${byRegion}
+    <h3 class="stat-head">Per type</h3>
+    ${byType}
+    <p class="stat-foot">${formatCount(thisYearCount)} dit jaar · ${formatCount(danger)} bedreigd erfgoed · ${formatCount(want)} op je verlanglijst.
+      Landen tellen mee via locaties die in één land liggen.</p>
+    <h3 class="stat-head">Alle bezochte locaties</h3>
+  </li>`;
+}
+
+// Korte naam voor een stempel: zonder toevoegingen tussen haakjes of na een komma.
+function shortName(name) {
+  const short = name.replace(/\s*\(.*?\)/g, "").split(/,| – | - /)[0].trim();
+  return short.length > 34 ? `${short.slice(0, 32).trim()}…` : short;
 }
 
 function glyph(category, status) {
@@ -279,9 +378,7 @@ function renderDetail() {
   const status = statusOf(s.id);
   const entry = state.statuses[s.id];
   const dist = state.origin ? distanceKm(state.origin.lat, state.origin.lon, s.lat, s.lon) : null;
-  const date = entry ? new Date(entry.updatedAt) : null;
-  const since = date ? date.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
-  const stampDate = date ? date.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" }).replaceAll("-", "·") : "";
+  const day = entry ? (status === "visited" ? visitDate(entry) : entry.updatedAt.slice(0, 10)) : null;
 
   const el = $("#detail");
   el.innerHTML = `
@@ -290,7 +387,7 @@ function renderDetail() {
       <p class="eyebrow">${glyph(s.category, status)} Nº ${escapeHtml(s.id)} · ${CATEGORY_LONG[s.category]}</p>
       <h2>${escapeHtml(s.name)}</h2>
       <p class="detail-sub">${escapeHtml(s.countries.split(",").join(", "))}</p>
-      ${status === "visited" ? `<div class="stamp" aria-hidden="true"><span>Bezocht</span><span class="stamp-date">${stampDate}</span></div>` : ""}
+      ${status === "visited" ? `<div class="stamp" aria-hidden="true"><span>Bezocht</span><span class="stamp-date">${formatDate(day, "stamp")}</span></div>` : ""}
     </header>
     <dl class="facts">
       <div><dt>Ingeschreven</dt><dd>${s.year}</dd></div>
@@ -302,13 +399,57 @@ function renderDetail() {
       <button class="status-btn" data-set="visited" aria-pressed="${status === "visited"}">Bezocht</button>
       <button class="status-btn" data-set="want" aria-pressed="${status === "want"}">Wil ik heen</button>
     </div>
-    ${status ? `<p class="since">${STATUS_LABEL[status]} sinds ${since}</p>` : ""}
+    ${status === "visited"
+      ? `<label class="visit-date">Bezocht op <input type="date" id="visit-date" value="${day}" max="${today()}"></label>`
+      : status ? `<p class="since">Op je lijst sinds ${formatDate(day)}</p>` : ""}
+    <section class="guide" id="guide" aria-live="polite"></section>
     <p class="links">
       <a href="https://whc.unesco.org/en/list/${encodeURIComponent(s.id)}" target="_blank" rel="noopener">Registerpagina op unesco.org ↗</a>
       <a href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}" target="_blank" rel="noopener">Route ↗</a>
     </p>`;
   el.hidden = false;
   $("#sheet").classList.add("has-detail");
+  fillGuide(s);
+}
+
+// ---------- Reisgids (Wikivoyage) ----------
+
+const guideHtml = new Map();
+
+async function fillGuide(site) {
+  const el = $("#guide");
+  if (guideHtml.has(site.id)) {
+    el.innerHTML = guideHtml.get(site.id);
+    return;
+  }
+  el.innerHTML = `<p class="guide-status">Reisgids ophalen bij Wikivoyage…</p>`;
+  let html;
+  try {
+    const { result } = await Guide.get(site);
+    html = result ? guideCard(result) : `<p class="guide-status">Wikivoyage heeft geen artikel over deze plek of binnen 10 km.
+      <a href="https://nl.wikivoyage.org/w/index.php?search=${encodeURIComponent(site.name)}" target="_blank" rel="noopener">Zelf zoeken ↗</a></p>`;
+    guideHtml.set(site.id, html);
+  } catch {
+    html = navigator.onLine
+      ? `<p class="guide-status">Wikivoyage is nu niet bereikbaar. Probeer het later opnieuw.</p>`
+      : `<p class="guide-status">Je bent offline en deze reisgids is nog niet bewaard. Zet hem klaar via het menu als je weer online bent.</p>`;
+  }
+  if (selectedId === site.id) $("#guide").innerHTML = html;
+}
+
+function guideCard(g) {
+  const where = g.kind === "match"
+    ? "over deze plek"
+    : `in de buurt${g.distanceKm != null ? `, ${formatKm(g.distanceKm)}` : ""}`;
+  const [first, ...rest] = g.paragraphs;
+  return `
+    ${g.image ? `<img class="guide-img" src="${escapeHtml(g.image)}" alt="" crossorigin="anonymous" loading="lazy">` : ""}
+    <p class="eyebrow">Reisgids · ${where}</p>
+    <h3>${escapeHtml(g.title)}</h3>
+    ${first ? `<p>${escapeHtml(first)}</p>` : ""}
+    ${rest.length ? `<details><summary>Lees verder</summary>${rest.map((p) => `<p>${escapeHtml(p)}</p>`).join("")}</details>` : ""}
+    <p class="guide-foot"><a href="${escapeHtml(g.url)}" target="_blank" rel="noopener">Hele artikel op Wikivoyage ${g.lang.toUpperCase()} ↗</a>
+      <span>Tekst: Wikivoyage, <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.nl" target="_blank" rel="noopener">CC BY-SA 4.0</a></span></p>`;
 }
 
 // ---------- Vertrekpunt ----------
@@ -433,6 +574,60 @@ async function importBackup(file) {
   }
 }
 
+// ---------- Offline ----------
+
+function updateOnline() {
+  $("#offline-badge").hidden = navigator.onLine;
+}
+
+async function updateStorageInfo() {
+  const el = $("#storage-info");
+  try {
+    const { usage } = await navigator.storage.estimate();
+    const persisted = await navigator.storage.persisted?.();
+    el.textContent = `In gebruik op dit apparaat: ${(usage / 1024 / 1024).toFixed(1).replace(".", ",")} MB` +
+      (persisted ? ". De browser ruimt dit niet zomaar op." : ".");
+  } catch {
+    el.textContent = "";
+  }
+}
+
+async function prepareOffline() {
+  const status = $("#offline-status");
+  const btn = $("#offline-btn");
+  if (!navigator.onLine) {
+    status.textContent = "Je bent offline. Klaarzetten kan alleen met verbinding.";
+    return;
+  }
+  const targets = sites.filter((s) => statusOf(s.id) === "want");
+  if (!targets.length) {
+    status.textContent = "Je verlanglijst is nog leeg. Markeer eerst plekken met ‘Wil ik heen’.";
+    return;
+  }
+  btn.disabled = true;
+  requestPersistence();
+
+  let guides = 0;
+  for (const [i, site] of targets.entries()) {
+    status.textContent = `Reisgidsen ophalen: ${i + 1} van ${targets.length}…`;
+    try {
+      await Guide.get(site);
+      guides++;
+    } catch { /* telt niet mee */ }
+  }
+
+  const template = TILE_URL.replace("{s}", "a").replace("{r}", L.Browser.retina ? "@2x" : "");
+  const urls = [...new Set(targets.flatMap((s) => OfflineMap.tilesAround(s.lat, s.lon, template)))];
+  const { failed } = await OfflineMap.fetchAll(urls, (done, total) => {
+    status.textContent = `Kaart opslaan: ${done} van ${total} tegels…`;
+  });
+
+  btn.disabled = false;
+  status.textContent = `Klaar: ${guides} van ${targets.length} reisgidsen en de kaart rond elke plek staan op dit apparaat.` +
+    (failed ? ` ${failed} kaarttegels lukten niet; probeer het later nog eens.` : "");
+  updateStorageInfo();
+}
+
 function refreshMarkers() {
   for (const s of sites) markers.get(s.id).setIcon(markerIcon(s));
 }
@@ -451,7 +646,24 @@ document.querySelector(".tabs").addEventListener("click", (e) => {
 
 $("#site-list").addEventListener("click", (e) => {
   const btn = e.target.closest(".site");
-  if (btn) openDetail(btn.dataset.id);
+  if (btn) return openDetail(btn.dataset.id);
+  const stamp = e.target.closest("[data-open]");
+  if (stamp) openDetail(stamp.dataset.open);
+});
+
+$("#progress").addEventListener("click", () => {
+  state.tab = "visited";
+  saveState();
+  closeDetail();
+  render();
+  setSheet("full");
+});
+
+$("#detail").addEventListener("change", (e) => {
+  if (e.target.id !== "visit-date" || !e.target.value) return;
+  state.statuses[selectedId].visitedOn = e.target.value;
+  saveState();
+  render();
 });
 
 $("#detail").addEventListener("click", (e) => {
@@ -492,8 +704,13 @@ $("#place-results").addEventListener("click", (e) => {
 
 $("#menu-btn").addEventListener("click", () => {
   $("#menu-status").textContent = "";
+  updateStorageInfo();
   $("#menu").showModal();
 });
+$("#offline-btn").addEventListener("click", prepareOffline);
+window.addEventListener("online", updateOnline);
+window.addEventListener("offline", updateOnline);
+updateOnline();
 $("#export-btn").addEventListener("click", exportBackup);
 $("#import-input").addEventListener("change", (e) => {
   const file = e.target.files[0];

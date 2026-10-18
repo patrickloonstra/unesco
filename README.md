@@ -11,12 +11,27 @@ bezocht, waar je nog heen wilt en wat er in de buurt ligt.
   saliegroen is "wil ik heen", groen is bezocht. Een rode rand betekent bedreigd erfgoed.
 - **In de buurt**: vanaf je GPS-locatie, een plaats die je zoekt of een punt dat je
   op de kaart tikt, binnen een straal van 10 tot 1.000 km, gesorteerd op afstand.
-- **Wil ik heen** en **Bezocht**: je eigen lijsten, met de datum van markeren.
+- **Wil ik heen** en **Bezocht**: je eigen lijsten. Bij een bezoek leg je de datum
+  vast; die staat op een stempel.
+- **Statistieken** bovenaan de tab Bezocht (of tik op de teller rechtsboven): aantal,
+  landen, aandeel van de lijst, een paspoort met je laatste stempels, en de verdeling
+  per UNESCO-regio en per type. Landen tellen mee via locaties die in één land liggen.
+- **Reisgids uit Wikivoyage** bij elke locatie: eerst het Nederlandstalige artikel
+  over de plek, anders het dichtstbijzijnde artikel binnen 10 km, en daarna hetzelfde
+  in het Engels. Er staat altijd bij of het over de plek zelf gaat of over een bestemming
+  in de buurt.
 - **Alle**: de volledige lijst, doorzoekbaar op naam of land.
 - **Back-up**: via het menu exporteer je je lijsten als JSON-bestand en importeer je
   ze op een ander apparaat. Bij dubbele locaties wint de meest recente wijziging.
 
 De kaart toont steeds precies wat de lijst toont.
+
+## Offline
+
+Alles wat je opent, blijft op je apparaat: de app, de lijst, reisgidsen, foto's en de
+kaarttegels die je bekeek. Via het menu zet je je hele verlanglijst vooraf klaar: per
+locatie de reisgids en de kaart van de omgeving (zoom 5 tot en met 13). Zonder
+verbinding zie je rechtsboven op de kaart "Offline".
 
 ## Opslag
 
@@ -51,6 +66,7 @@ alleen in je eigen browser.
 | Pad | Inhoud |
 | --- | --- |
 | `index.html`, `styles.css`, `app.js` | De app |
+| `guide.js` | Wikivoyage-reisgids met eigen cache, en kaarttegels klaarzetten |
 | `data/sites.json` | Compacte lijst van alle locaties |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Installeerbaar en offline bruikbaar |
 | `vendor/` | Leaflet 1.9.4, Leaflet.markercluster 1.5.3 en de lettertypen Gloock, Schibsted Grotesk en IBM Plex Mono (OFL, via Fontsource) |
@@ -74,3 +90,4 @@ Je opgeslagen statussen gebruiken het officiële UNESCO-id, dus die blijven geld
 
 - Kaarttegels: © OpenStreetMap-bijdragers, © CARTO
 - Plaatsen zoeken: Nominatim (OpenStreetMap), alleen bij het indrukken van "Zoek"
+- Reisgidsen: Wikivoyage (tekst onder CC BY-SA 4.0), foto's via Wikimedia Commons

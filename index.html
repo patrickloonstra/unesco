@@ -26,10 +26,10 @@
       </svg>
       <h1>Werelderfgoed</h1>
     </div>
-    <div class="tally" id="progress" aria-live="polite">
+    <button class="tally" id="progress" aria-live="polite" aria-label="Bekijk je statistieken">
       <div class="tally-figures"><strong id="tally-n">0</strong> <span id="tally-of"></span> <span class="tally-label">bezocht</span></div>
       <div class="tally-bar"><span id="tally-fill"></span></div>
-    </div>
+    </button>
     <button class="icon-btn" id="menu-btn" aria-label="Menu" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 8h16M4 16h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
@@ -38,6 +38,7 @@
   <main class="layout">
     <div class="map-wrap">
       <div id="map" class="map" aria-label="Kaart met werelderfgoedlocaties"></div>
+      <span class="offline-badge" id="offline-badge" role="status" hidden>Offline</span>
       <aside class="legend" aria-label="Legenda">
         <span><i class="glyph glyph-c is-none"></i>Cultureel</span>
         <span><i class="glyph glyph-n is-none"></i>Natuur</span>
@@ -93,7 +94,14 @@
         <input type="file" id="import-input" accept="application/json,.json" hidden>
       </label>
       <p class="menu-status" id="menu-status" role="status"></p>
-      <p class="small">Bron: UNESCO-werelderfgoedlijst, <span id="data-info"></span>. Het embleem: het vierkant staat voor wat mensen maakten, de cirkel voor de natuur. Kaart © OpenStreetMap, © CARTO.</p>
+
+      <h2>Offline</h2>
+      <p>Alles wat je opent, blijft bewaard: de app, de lijst, reisgidsen en de kaart die je bekeek. Ga je op reis? Zet je verlanglijst dan vooraf klaar.</p>
+      <button type="button" class="btn" id="offline-btn">Verlanglijst offline klaarzetten</button>
+      <p class="menu-status" id="offline-status" role="status"></p>
+      <p class="small" id="storage-info"></p>
+
+      <p class="small">Bron: UNESCO-werelderfgoedlijst, <span id="data-info"></span>. Het embleem: het vierkant staat voor wat mensen maakten, de cirkel voor de natuur. Reisgidsen: Wikivoyage (CC BY-SA 4.0). Kaart © OpenStreetMap, © CARTO.</p>
       <button class="btn btn-secondary" value="close">Sluiten</button>
     </form>
   </dialog>
@@ -102,6 +110,7 @@
 
   <script src="vendor/leaflet/leaflet.js"></script>
   <script src="vendor/markercluster/leaflet.markercluster.js"></script>
+  <script src="guide.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
