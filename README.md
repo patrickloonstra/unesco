@@ -36,9 +36,14 @@ GPS werkt alleen via `https://` of `localhost`.
 
 ## Publiceren
 
-Zet de map op een willekeurige statische host, bijvoorbeeld GitHub Pages
-(Settings → Pages → branch kiezen, map `/`). Daarna kun je de app op je telefoon
-via "Zet op beginscherm" installeren.
+Zet de map op een willekeurige statische host, bijvoorbeeld GitHub Pages:
+Settings → Pages → Source "Deploy from a branch" → branch kiezen, map `/ (root)`.
+De site staat dan op `https://patrickloonstra.github.io/unesco/`. Daarna kun je de
+app op je telefoon via "Zet op beginscherm" installeren.
+
+Let op: GitHub Pages op een privé-repo vraagt een betaald GitHub-abonnement, en de
+gepubliceerde site is altijd openbaar. Je lijsten blijven wel privé, want die staan
+alleen in je eigen browser.
 
 ## Structuur
 
